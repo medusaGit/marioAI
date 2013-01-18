@@ -172,7 +172,6 @@ class FixedPolicyAgent(Agent):
     def get_action(self, observation):
         """Choose an action according to the fixed policy outlined in the
         docstring of this class.
-        
         """
         # check if we still follow the actions from the previous trial
         if len(self.last_actions) > self.step_number:
@@ -182,86 +181,43 @@ class FixedPolicyAgent(Agent):
         monsters = get_monsters(observation)
         mario = get_mario(monsters)
 
-        # sometimes jump for no reason at all. at the end of this function,
-        # the value of this variable will be compared against a random number
-        # to see if Mario should jump
-        jump_hesitation = 0.95
-
         # check the blocks in the area to Mario's upper right
+        dollarAbove = False
         for up in range(5):
             for right in range(7):
                 tile = get_tile_at(mario.x + right, mario.y + up, observation)
-                if tile == '$':
-                    # there is a coin, so jump more often
-                    jump_hesitation *= 0.7
-                elif tile in [' ', 'M', None]:
+                dollarAbove |= tile == '$'
+                if tile in [' ', 'M', None]:
                     # don't worry if it is a blank space
                     pass
-                else:
-                    # tend to jump more if there is a block close
-                    jump_hesitation *= 1.0 * right / 7
-
-        # check for a pit (concealed hole in the ground) in front of Mario
-        # TODO: Improve this code!
-        is_pit = False
-        for right in range(3):
-            pit_col = True
-            for down in range(int(math.ceil(mario.y))):
-                tile = get_tile_at(mario.x + right, mario.y - down, observation)
-                if tile not in [' ', 'M', None]:
-                    pit_col = False
-                    break
-            if pit_col:
-                is_pit = True
-                break
-        if is_pit:
-            # always jump if there is a pit
-            jump_hesitation = 0
 
         # look for nearby monsters by checking its positions againts Mario's
-        monster_near = False
         for m in monsters:
             if m.m_type in [0, 10, 11]:
                 # m is Mario
                 continue
             dx = m.x - mario.x
             dy = m.y - mario.y
-            if dx > -1 and dx < 10 and dy > -4 and dy < 4:
-                # the more monsters and the closer they are, the more likely
-                # Mario is to jump
-                jump_hesitation *= (dx + 2)/12
-                monster_near = True
-        
-        # hold down the jump button while in the air sometimes, to jump higher
-        if mario.sy > 0.1:
-            jump_hesitation *= 0.5
 
-        # check if Mario is already hesitating walking
-        if self.walk_hesitating:
-            # stop hesitating if there is no monster near (or sometimes by
-            # chance)
-            if not monster_near or random.random() > 0.75:
-                self.walk_hesitating = False
-        # sometimes hesitate if there is a monster near
-        elif monster_near and random.random() > 0.8:
-            self.walk_hesitating = True
-        # sometimes hesitate even if there isn't one
-        elif random.random() > 0.9:
-            self.walk_hesitating = True
 
-        action = Action(3, 0)
-        # direction (left: -1, right: 1, neither: 0)
-        action.intArray[0] = 0 if self.walk_hesitating else 1
-        # jumping (yes: 1, no: 0)
-        action.intArray[1] = 1 if random.random() > jump_hesitation else 0
-        # speed button (on: 1, off: 0)
-        action.intArray[2] = 1 if not (is_pit or monster_near) else 0
-        
+        action = self.getRandomAction()
         # add the action to the trajectory being recorded, so it can be reused
         # in the next trial
         self.cur_actions.append(action)
 
         return action        
+
+    def getRandomAction(self, mindir=-1):
+        action = Action(3, 0)
+        # direction (left: -1, right: 1, neither: 0)
+        action.intArray[0] = random.randint(mindir,1)
+        # jumping (yes: 1, no: 0)
+        action.intArray[1] = random.randint(0,1)
+        # speed button (on: 1, off: 0)
+        action.intArray[2] = random.randint(0,1)
+        return action
+        
+
 
 if __name__=="__main__":        
     AgentLoader.loadAgent(FixedPolicyAgent())
