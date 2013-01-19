@@ -1,13 +1,21 @@
 import pylab
+import os
 
 smooth = 4
+fileset = 10
 
 def draw(name):
-    f = open("res/%s" %name)
-    data = [float(d) for d in f.readlines()[0].strip().split(' ')]
-    print name,data
-    avg_data = [sum(data[d-smooth:d])/float(smooth) for d in range(smooth, len(data))]
-    pylab.plot(range(len(avg_data)), avg_data)
+    data = []
+    for i in range(100):
+        fn = "res/%s_%d_%d" % (name, fileset, i)
+        if not os.path.isfile(fn):
+            break
+        line = open(fn).readline().strip()
+        data.append( map(float,line.split(' ')) )
+
+    if len(data) > 0 :
+        avg_data = map(sum, zip(*data))
+        pylab.plot(range(len(avg_data)), avg_data)
 
 if __name__ == "__main__":
     files = ["mario_simple_learner","mario_random", "mario_random_forward", "mario_random_stop_forward"]
