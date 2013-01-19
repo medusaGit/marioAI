@@ -12,7 +12,7 @@ from rlglue.agent import AgentLoader as AgentLoader
 from rlglue.utils.TaskSpecVRLGLUE3 import TaskSpecParser
 
 class FixedPolicyAgent(Agent):
-    
+
     """A simple agent that:
         - never goes to the left
         - mostly goes to the right
@@ -25,19 +25,31 @@ class FixedPolicyAgent(Agent):
         for the last 7 steps (assuming there are at least 7 steps).
 
     """
-    
+
+    def __init__(self,learner="mario_random_forward"):
+        LEARNERS = {
+                "mario_random" : \
+                        self.mario_random,
+                "mario_random_forward" : \
+                        self.mario_random_forward,
+                "mario_random_stop_forward" : \
+                        self.mario_random_stop_forward,
+                "mario_simple_learner" : \
+                        self.mario_simple_learner 
+                }
+        
+        self.learner = self.mario_random_forward
+        if learner in LEARNERS:
+            self.learner = LEARNERS[learner]
+        
+        
+
     def agent_init(self, taskSpecString):
         if taskSpecString.find("Mario-v1") != -1:
             print "Task specification contains Mario-v1"
         else:
             print "Task specification does not contain string Mario-v1"
             exit()
-
-        # possible learners:
-        # mario_random
-        # mario_random_forward
-        # mario_random_stop_forward
-        self.learner = self.mario_random_stop_forward
 
         # set random seed
         # random.seed(0)
@@ -72,7 +84,7 @@ class FixedPolicyAgent(Agent):
         self.step_number = 0
         self.trial_reward = 0
         self.print_world(observation)
-        return self.get_action(observation)
+        return self.learner(observation)
     
     def agent_step(self, reward, observation):
         self.step_number += 1
@@ -119,7 +131,7 @@ class FixedPolicyAgent(Agent):
     def mario_q_matrix(self, observation):
         return self.getRandomAction(0)
 
-    def get_action(self, observation):
+    def mario_simple_learner(self, observation):
         """Choose an action according to the fixed policy outlined in the
         docstring of this class.
         """
@@ -163,4 +175,7 @@ class FixedPolicyAgent(Agent):
 
 
 if __name__=="__main__":        
-    AgentLoader.loadAgent(FixedPolicyAgent())
+    lrn = ""
+    if len(sys.argv) > 1:
+        lrn = sys.argv[1]
+    AgentLoader.loadAgent(FixedPolicyAgent(lrn))

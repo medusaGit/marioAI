@@ -1,6 +1,12 @@
 
 def write_score(filename, scores):
-    f = open("res/%s" % filename, "w")
+    import os
+    l = len(scores)
+    for i in range(100):
+        fn = "res/%s_%d_%d" % (filename,l,i)
+        if not os.path.isfile(fn):
+            break
+    f = open(fn, "w")
     scores = map(str,scores)
     f.write(" ".join(scores))
     f.flush()
