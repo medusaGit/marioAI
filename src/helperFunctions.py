@@ -1,3 +1,4 @@
+import numpy as np
 
 def write_score(filename, scores):
     import os
@@ -85,5 +86,16 @@ def get_mario(monsters):
             return monster
     else:
         return None
+
+
+def getOkolica(o,l=4,r=4,u=4,d=4):
+    x = np.reshape(np.array(o),(16,22))[:,:21]
+    m = o.tostring().find("M")
+    dy = m/22 
+    dx = m%22
+    state = x[max(0,dy-u) : dy+d+1 , max(0,dx-l) : dx+r+1]
+    return state
+    
+
 
 

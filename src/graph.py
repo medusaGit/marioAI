@@ -2,7 +2,7 @@ import pylab
 import numpy
 import os
 
-fileset = 500
+fileset = 100
 
 def draw(name):
     data = []
@@ -18,7 +18,7 @@ def draw(name):
         pylab.plot(range(len(avg_data)), avg_data)
 
 if __name__ == "__main__":
-    files = ["mario_random", "mario_random_forward", "mario_random_stop_forward"]
+    files = ["mario_simple_learner", "mario_random_forward", "mario_random_stop_forward"]
     map(draw, files)
     pylab.xlabel("Episode")
     pylab.ylabel("Reward")

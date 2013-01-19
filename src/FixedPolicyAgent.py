@@ -1,4 +1,5 @@
 import math
+import copy
 import random
 import sys
 import time
@@ -6,6 +7,7 @@ import numpy as np
 import cPickle as pickle
 
 import helperFunctions as hf
+reload(hf)
 
 from rlglue.agent.Agent import Agent
 from rlglue.types import Action
@@ -44,6 +46,14 @@ class FixedPolicyAgent(Agent):
         if learner in LEARNERS:
             self.learner = LEARNERS[learner]
         
+    def set_globals(self, o, s, sa):
+        global all_scores, q, all_actions, state, state_arr, observation
+        all_scores = self.all_scores
+        q = self.Q
+        all_actions = self.all_actions
+        observation = o
+        state = s
+        state_arr = sa
         
 
     def agent_init(self, taskSpecString):
@@ -54,7 +64,7 @@ class FixedPolicyAgent(Agent):
             exit()
 
         # set random seed
-        # random.seed(0)
+        random.seed(0)
 
         # number of all trials
         self.trial_number = 0
@@ -67,31 +77,29 @@ class FixedPolicyAgent(Agent):
         # total reward
         self.total_reward = 0
         # trial reward
-        self.trial_reward = 0
-
+        self.trial_reward = -10000
         # scores for all trials
         self.all_scores = []
-        
         # matrix for all states and actions
         #self.Q = pickle.load(open("q.pkl"))
         self.Q = {}
-
+        self.best_trial = {"Q":{}, "score":self.trial_reward}
         # matrix for actions taken in current run
         self.all_actions = []
-
         # how much current reward afects overall reward
         self.alpha = 0.1
-
         # rate of reward propagation, smaller means it will affect
         # more states
         self.gama = 0.9
+        self.max_reward = -100
         
         self.debug = True
         
         
     def print_world(self, observation):
         if self.debug:
-            print "State of the world at time step %d:" % (self.step_number)
+            print "step: %d     reward: %.2f    max: %.2f" % \
+                    (self.step_number, self.trial_reward, self.max_reward)
             print "".join(observation.charArray)
 
 
@@ -111,6 +119,7 @@ class FixedPolicyAgent(Agent):
         self.step_number += 1
         self.total_steps += 1
         self.trial_reward += reward
+        self.max_reward = max(self.max_reward,reward)
         self.print_world(observation)
         self.propagate_reward(reward)
         return self.learner(observation)
@@ -129,7 +138,15 @@ class FixedPolicyAgent(Agent):
         print "steps per second:  %d" % (self.step_number/time_passed)
         print "total reward:      %.2f" % (self.total_reward)
         print "trial reward:      %.2f" % (self.trial_reward)
+        print "best score so far: %.2f" % (self.best_trial["score"])
         print ""
+        
+        #if self.trial_reward > self.best_trial["score"] :
+        #    self.Q = copy.deepcopy(self.best_trial["Q"])
+        #else:
+        #    self.best_trial["score"] = self.trial_reward
+        #    self.bset_trial["Q"] = copy.deepcopy(self.Q)
+
     
     def agent_cleanup(self):
         hf.write_score(self.learner.func_name, self.all_scores)
@@ -141,7 +158,7 @@ class FixedPolicyAgent(Agent):
     
     def agent_message(self,inMessage):
         return None
-
+    
     def propagate_reward(self, reward):
         i = len(self.all_actions)-1
         alpha = self.alpha
@@ -150,7 +167,7 @@ class FixedPolicyAgent(Agent):
             state = self.all_actions[i][0]
             actionTupple = self.all_actions[i][1]
             curRew = self.Q[state][actionTupple] 
-            self.Q[state][actionTupple] = alpha*reward + (1-alpha)*curRew
+            self.Q[state][actionTupple] += alpha*reward #(1-alpha)*curRew
             reward *= self.gama
 
     def mario_random(self, observation):
@@ -163,74 +180,67 @@ class FixedPolicyAgent(Agent):
         return self.getRandomAction(0)
 
     def get_q_action(self, state):
-        ## there are 10 all possible states to be in
-        global q,s,a
-        q = self.Q
-        s = state
-        if self.debug: print "q len", len(q)
+        if self.debug: print "q len", len(self.Q)
             
         if state not in self.Q:
             actionScores = {}
             for i in range(-1,2):
                 for j in range(0,2):
-                    for k in range(0,2):
+                    for k in range(1,2):
 
                         actionScores[(i,j,k)] = 0
             self.Q[state] = actionScores 
 
         # actions = [ (actionTupple, score), ...]
-        actions = sorted(self.Q[state].items(), key=lambda x:x[1])
-        actionTuple = actions[int(random.random()**3 * len(actions))][0]
+        items = self.Q[state].items()
+        random.shuffle(items)
+        actions = sorted(items, key=lambda x:-x[1])
+        ind = int(random.random()**3 * len(actions))
+        actionTuple = actions[ind][0]
         self.all_actions.append((state,actionTuple))
-
+        
         action = self.createAction(*actionTuple)
         a = action
         return action
+
+    
 
     def mario_simple_learner(self, observation):
         """Choose an action according to the fixed policy outlined in the
         docstring of this class.
         """
-        okolica = 2
 
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
-        x = np.reshape(np.array(observation.charArray),(16,22))[:,:21]
-        
-        x = np.flipud(x)
 
-        state = x[
-                mario.y-okolica:mario.y+okolica+1 , 
-                mario.x-okolica:mario.x+okolica+1
-                ]
+        state_arr = hf.getOkolica(observation.charArray,3,3,3,3)
+
         # fill monsters
-        # look for nearby monsters
-        min
+        state = state_arr.tostring()
         for m in monsters:
             if m.m_type in [0, 10, 11]:
                 # m is Mario
                 continue
             #print m.y,m.x 
-            dx = int(m.x - mario.x) + okolica
-            dy = int(m.y - mario.y) + okolica
-            try:
-                x[dy,dx] = "x"
-            except:
-                pass
+            dx = m.x - mario.x
+            dy = m.y - mario.y
+            if abs(dx) < 4 and abs(dy) < 4:
+                state.replace("M","X")
             
 
-
-
-
-        state = state.tostring()
         for ground in list("1234567"):
             state = state.replace(ground,"7")
 
+        if state == '':
+            self.print_world(observation)
+            exit(1)
                 
         if self.debug: print "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        if self.debug: print mario.x,mario.y,"state", "'%s'" % state
-        # print "observeation.charArray", observation.charArray
+        if self.debug: print " x: %2d    y: %2d    '%30s'" % \
+                (mario.x, mario.y, state)
         action = self.get_q_action(state)
+
+        self.set_globals(observation, state, state_arr)
         return action        
 
     def createAction(self,i,j,k):
