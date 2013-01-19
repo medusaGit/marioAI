@@ -1,4 +1,11 @@
 
+def write_score(filename, scores):
+    f = open("res/%s" % filename, "w")
+    scores = map(str,scores)
+    f.write(" ".join(scores))
+    f.flush()
+    f.close()
+
 def get_tile_at(x, y, observation):
     """Return the char representing the tile at the given location.
     If unknown, return None.

@@ -33,49 +33,72 @@ class FixedPolicyAgent(Agent):
             print "Task specification does not contain string Mario-v1"
             exit()
 
-        # set random seed
-        random.seed(0)
+        # possible learners:
+        # mario_random
+        # mario_random_forward
+        # mario_random_stop_forward
+        self.learner = self.mario_random_stop_forward
 
+        # set random seed
+        # random.seed(0)
+
+        # number of all trials
+        self.trial_number = 0
         # number of steps since the beginning of this run
         self.total_steps = 0
         # number of steps since the beginning of this trial
         self.step_number = 0
         # time when the current trial began
         self.trial_start = 0
-        # sequence of actions taken during the last trial
-        self.last_actions = []
-        # sequence of actions taken so far during the current trial
-        self.cur_actions = []
+        # total reward
+        self.total_reward = 0
+        # trial reward
+        self.trial_reward = 0
+
+        # scores for all trials
+        self.all_scores = []
         
-        # when this is True, Mario is pausing for some number of steps
-        self.walk_hesitating = False
+        self.print_states = False
         
+        
+    def print_world(self, observation):
+        if self.print_states:
+            print "State of the world at time step %d:" % (self.step_number)
+            print "".join(observation.charArray)
+
+
     def agent_start(self, observation):
         self.trial_start = time.time()
         self.step_number = 0
-        print "State of the world at time step {}:".format(self.step_number)
-        print "".join(observation.charArray)
+        self.trial_reward = 0
+        self.print_world(observation)
         return self.get_action(observation)
     
     def agent_step(self, reward, observation):
         self.step_number += 1
         self.total_steps += 1
-        print "State of the world at time step {}:".format(self.step_number)
-        print "".join(observation.charArray)
-        return self.get_action(observation)
+        self.trial_reward += reward
+        self.print_world(observation)
+        return self.learner(observation)
     
     def agent_end(self, reward):
-        # if there were at least 7 actions before the end of the trial,
-        # store all actions besides the last 7 actions
-        if len(self.cur_actions) > 7:
-            self.last_actions = self.cur_actions[:-7]
+        self.trial_reward += reward
+        self.total_reward += self.trial_reward
+        self.all_scores.append(self.trial_reward)
+
         # compute some statistics about the current trial
         time_passed = time.time() - self.trial_start
-        print "Trial ended after {} steps.".format(self.step_number)
-        print "On average, {} steps per second were executed.".\
-            format(self.step_number/time_passed)
+        self.trial_number += 1
+        
+        print "trial number:      %d -" % (self.trial_number)
+        print "number of steps:   %d" % (self.step_number)
+        print "steps per second:  %d" % (self.step_number/time_passed)
+        print "total reward:      %.2f" % (self.total_reward)
+        print "trial reward:      %.2f" % (self.trial_reward)
+        print ""
     
     def agent_cleanup(self):
+        hf.write_score(self.learner.func_name, self.all_scores)
         pass
     
     def agent_freeze(self):
@@ -83,15 +106,23 @@ class FixedPolicyAgent(Agent):
     
     def agent_message(self,inMessage):
         return None
+
+    def mario_random(self, observation):
+        return self.getRandomAction()
     
+    def mario_random_forward(self, observation):
+        return self.getRandomAction(1)
+    
+    def mario_random_stop_forward(self, observation):
+        return self.getRandomAction(0)
+
+    def mario_q_matrix(self, observation):
+        return self.getRandomAction(0)
+
     def get_action(self, observation):
         """Choose an action according to the fixed policy outlined in the
         docstring of this class.
         """
-        # check if we still follow the actions from the previous trial
-        if len(self.last_actions) > self.step_number:
-            self.cur_actions.append(self.last_actions[self.step_number])
-            return self.cur_actions[-1]
         
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
@@ -116,9 +147,6 @@ class FixedPolicyAgent(Agent):
 
 
         action = self.getRandomAction()
-        # add the action to the trajectory being recorded, so it can be reused
-        # in the next trial
-        self.cur_actions.append(action)
 
         return action        
 
