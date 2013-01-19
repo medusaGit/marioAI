@@ -73,7 +73,8 @@ class FixedPolicyAgent(Agent):
         self.all_scores = []
         
         # matrix for all states and actions
-        self.Q = pickle.load(open("q.pkl"))
+        #self.Q = pickle.load(open("q.pkl"))
+        self.Q = {}
 
         # matrix for actions taken in current run
         self.all_actions = []
@@ -85,7 +86,7 @@ class FixedPolicyAgent(Agent):
         # more states
         self.gama = 0.9
         
-        self.debug = False
+        self.debug = True
         
         
     def print_world(self, observation):
@@ -190,16 +191,42 @@ class FixedPolicyAgent(Agent):
         """Choose an action according to the fixed policy outlined in the
         docstring of this class.
         """
+        okolica = 2
 
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
         x = np.reshape(np.array(observation.charArray),(16,22))[:,:21]
-        state = np.flipud(x)[mario.y-2:mario.y+3 , mario.x-2:mario.x+3]
+        
+        x = np.flipud(x)
+
+        state = x[
+                mario.y-okolica:mario.y+okolica+1 , 
+                mario.x-okolica:mario.x+okolica+1
+                ]
+        # fill monsters
+        # look for nearby monsters
+        min
+        for m in monsters:
+            if m.m_type in [0, 10, 11]:
+                # m is Mario
+                continue
+            #print m.y,m.x 
+            dx = int(m.x - mario.x) + okolica
+            dy = int(m.y - mario.y) + okolica
+            try:
+                x[dy,dx] = "x"
+            except:
+                pass
+            
+
+
+
+
         state = state.tostring()
         for ground in list("1234567"):
             state = state.replace(ground,"7")
 
-         
+                
         if self.debug: print "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         if self.debug: print mario.x,mario.y,"state", "'%s'" % state
         # print "observeation.charArray", observation.charArray
