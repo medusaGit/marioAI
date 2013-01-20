@@ -22,7 +22,7 @@ class FixedPolicyAgent(Agent):
     def agent_init(self, taskSpecString):
         #random.seed(5)
 
-        self.tweek = 1
+        self.tweek = 2
         self.best_reward = -10
         self.total_steps = 0
 
@@ -116,7 +116,7 @@ class FixedPolicyAgent(Agent):
             items = self.Q[state].items()
             random.shuffle(items)
             actions = sorted(items, key=lambda x:-x[1])
-            ind = 0 # int(random.random()**4 * len(actions))
+            ind = int(random.random()**2 * len(actions))
             if actions[ind][1] > 0:
                 action = self.createAction(*actions[ind][0])
         if action == None :
