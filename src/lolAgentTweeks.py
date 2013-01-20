@@ -111,7 +111,7 @@ class FixedPolicyAgent(Agent):
     def get_q_action(self, state):
         action = None
         explore = 0.1
-        if state in self.Q:
+        if state in self.Q and explore/10 < random.random():
             # actions = [ (actionT, score), ...]
             items = self.Q[state].items()
             random.shuffle(items)
@@ -126,7 +126,7 @@ class FixedPolicyAgent(Agent):
                 r = random.choice(a)
                 action = self.createAction(*r[1])
             else: 
-                action = self.getRandomAction(run = 1)
+                action = self.getRandomAction()
                 self.Q[state][tuple(action.intArray)] = 0
         self.trial_actions.append((state,tuple(action.intArray)))
         return action

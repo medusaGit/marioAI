@@ -32,12 +32,16 @@ def draw(name):
 if __name__ == "__main__":
     files = ["lolAgent", 
             "lolAgentTweeks_1", 
-            "lolAgentTweeks_2", 
-            "lolAgentTweeks_3", 
+            "lolAgentTweeks_4", 
             "randomAgent", 
             "randomForwardAgent"]
     map(draw, files)
     pylab.xlabel("Episode")
     pylab.ylabel("Reward")
-    pylab.legend(files)
+    legend = ["simple Q learning",
+            "inc Q learnering 1",
+            "inc Q learnering 4",
+            "random",
+            "random forward"]
+    pylab.legend(legend)
     pylab.show()
