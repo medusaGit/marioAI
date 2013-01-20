@@ -32,8 +32,8 @@ class FixedPolicyAgent(Agent):
         self.trial_reward_pos = 0
         self.trial_reward_neg = 0
 
-        self.all_scores = [0]
-        self.all_actions = []
+        self.all_scores = []
+        self.trial_actions = []
         
         self.Q = defaultdict(dict)
 
@@ -41,8 +41,7 @@ class FixedPolicyAgent(Agent):
         self.debug = False
         
     def agent_start(self, observation):
-        self.all_actions = []
-        self.all_scores = [0]
+        self.trial_actions = []
         self.trial_start = time.time()
         self.trial_steps = 0
         self.trial_number = 0
@@ -75,9 +74,6 @@ class FixedPolicyAgent(Agent):
             self.trial_reward_neg += reward
 
         self.print_stats()
-
-        self.propagate_reward(reward)
-
     
     def agent_cleanup(self):
         hf.write_score("randomAgent", self.all_scores)
@@ -105,14 +101,14 @@ class FixedPolicyAgent(Agent):
         return action
         
     def print_world(self, s = [], sa = [], ok=100):
-        global all_scores, q, all_actions, state, state_arr, \
+        global all_scores, q, trial_actions, state, state_arr, \
                 observation, mario, monsters
         
         observation = self.last_observation
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
-        all_cores = self.all_scores
-        all_actions = self.all_actions
+        all_scores = self.all_scores
+        trial_actions = self.trial_actions
         if len(sa) > 0: state_arr = sa
         if len(s) > 0: state = s
         q = self.Q

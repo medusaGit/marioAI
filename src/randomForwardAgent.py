@@ -20,7 +20,7 @@ from rlglue.utils.TaskSpecVRLGLUE3 import TaskSpecParser
 class FixedPolicyAgent(Agent):
 
     def agent_init(self, taskSpecString):
-        #random.seed(5)
+        random.seed(5)
 
         self.best_reward = -10
         self.total_steps = 0
@@ -74,12 +74,9 @@ class FixedPolicyAgent(Agent):
             self.trial_reward_neg += reward
 
         self.print_stats()
-
-        self.propagate_reward(reward)
-
     
     def agent_cleanup(self):
-        hf.write_score("lolAgent", self.all_scores)
+        hf.write_score("randomForwardAgent", self.all_scores)
     
     def agent_freeze(self):
         print "agent freeze"
@@ -89,58 +86,9 @@ class FixedPolicyAgent(Agent):
         print "agent message:", inMessage
         return None
     
-    def propagate_reward(self, reward):
-        alpha = 0.3
-        gama = 0.5
-        Q = self.Q
-        l = len(self.trial_actions)
-        for i in range(1,l):
-            s = self.trial_actions[-i-1][0]
-            a = self.trial_actions[-i-1][1]
-            sn = self.trial_actions[-i][0]
-            an = self.trial_actions[-i][1]
-            
-            #Q[s][a] = (1-alpha)*Q[s][a] + alpha*(reward + gama*Q[sn][an])
-            Q[s][a] += reward/(1+ i/10)
-
-
-    def get_q_action(self, state):
-        action = None
-        if state in self.Q:
-            # actions = [ (actionT, score), ...]
-            items = self.Q[state].items()
-            random.shuffle(items)
-            actions = sorted(items, key=lambda x:-x[1])
-            ind = 0 # int(random.random()**4 * len(actions))
-            if actions[ind][1] > 0:
-                action = self.createAction(*actions[ind][0])
-        if action == None :
-            action = self.getRandomAction(run = 1)
-            self.Q[state][tuple(action.intArray)] = 0
-        self.trial_actions.append((state,tuple(action.intArray)))
-        return action
-
-    
 
     def get_action(self, observation, reward = 0):
-
-        monsters = hf.get_monsters(observation)
-        mario = hf.get_mario(monsters)
-
-        state_arr = hf.getOkolica(observation,4,4,4,4)
-        state = state_arr.tostring()
-        action = self.get_q_action(state)
-        self.propagate_reward(reward)
-
-        if self.debug: self.print_world(state, state_arr)
-        return action        
-
-    def createAction(self,i,j,k):
-        action = Action(3, 0)
-        action.intArray[0] = i
-        action.intArray[1] = j
-        action.intArray[2] = k
-        return action
+        return self.getRandomAction(0)
 
     def getRandomAction(self, mindir=-1, run = 0):
         action = Action(3, 0)
@@ -159,7 +107,7 @@ class FixedPolicyAgent(Agent):
         observation = self.last_observation
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
-        all_cores = self.all_scores
+        all_scores = self.all_scores
         trial_actions = self.trial_actions
         if len(sa) > 0: state_arr = sa
         if len(s) > 0: state = s
@@ -193,4 +141,6 @@ class FixedPolicyAgent(Agent):
 
 if __name__=="__main__":        
     AgentLoader.loadAgent(FixedPolicyAgent())
+
+
 

@@ -22,6 +22,7 @@ class FixedPolicyAgent(Agent):
     def agent_init(self, taskSpecString):
         #random.seed(5)
 
+        self.tweek = 1
         self.best_reward = -10
         self.total_steps = 0
 
@@ -35,7 +36,7 @@ class FixedPolicyAgent(Agent):
         self.all_scores = []
         self.trial_actions = []
         
-        self.Q = defaultdict(dict)
+        self.Q = defaultdict(lambda: defaultdict(int))
 
         self.debug = True
         self.debug = False
@@ -79,7 +80,7 @@ class FixedPolicyAgent(Agent):
 
     
     def agent_cleanup(self):
-        hf.write_score("lolAgent", self.all_scores)
+        hf.write_score("lolAgentTweeks_%d"%self.tweek, self.all_scores)
     
     def agent_freeze(self):
         print "agent freeze"
@@ -90,8 +91,9 @@ class FixedPolicyAgent(Agent):
         return None
     
     def propagate_reward(self, reward):
+        beta = 0.7
         alpha = 0.3
-        gama = 0.5
+        gama = 0.1
         Q = self.Q
         l = len(self.trial_actions)
         for i in range(1,l):
@@ -101,11 +103,14 @@ class FixedPolicyAgent(Agent):
             an = self.trial_actions[-i][1]
             
             #Q[s][a] = (1-alpha)*Q[s][a] + alpha*(reward + gama*Q[sn][an])
+            #reward *= beta
+            
             Q[s][a] += reward/(1+ i/10)
 
 
     def get_q_action(self, state):
         action = None
+        explore = 0.2
         if state in self.Q:
             # actions = [ (actionT, score), ...]
             items = self.Q[state].items()
@@ -115,8 +120,14 @@ class FixedPolicyAgent(Agent):
             if actions[ind][1] > 0:
                 action = self.createAction(*actions[ind][0])
         if action == None :
-            action = self.getRandomAction(run = 1)
-            self.Q[state][tuple(action.intArray)] = 0
+            if len(self.Q) > 10 and explore > random.random():
+                a = sorted([(k,j) for i in self.Q.values() 
+                        for j,k in i.items()])[-10:]
+                r = random.choice(a)
+                action = self.createAction(*r[1])
+            else: 
+                action = self.getRandomAction(run = 1)
+                self.Q[state][tuple(action.intArray)] = 0
         self.trial_actions.append((state,tuple(action.intArray)))
         return action
 
@@ -127,7 +138,7 @@ class FixedPolicyAgent(Agent):
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
 
-        state_arr = hf.getOkolica(observation,4,4,4,4)
+        state_arr = hf.getOkolica(observation,3,3,3,3)
         state = state_arr.tostring()
         action = self.get_q_action(state)
         self.propagate_reward(reward)
