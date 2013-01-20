@@ -22,7 +22,7 @@ class FixedPolicyAgent(Agent):
     def agent_init(self, taskSpecString):
         #random.seed(5)
 
-        self.tweek = 3
+        self.tweek = 4
         self.best_reward = -10
         self.total_steps = 0
 
@@ -111,7 +111,7 @@ class FixedPolicyAgent(Agent):
     def get_q_action(self, state):
         action = None
         explore = 0.1
-        if state in self.Q and explore < random.random():
+        if state in self.Q and explore < 10*random.random():
             # actions = [ (actionT, score), ...]
             items = self.Q[state].items()
             random.shuffle(items)
