@@ -87,13 +87,35 @@ def get_mario(monsters):
     else:
         return None
 
+def getPoint(arr,s):
+    m = arr.tostring().find(s)
+    dy = m / arr.shape[1]
+    dx = m % arr.shape[1]
+    return (dx,dy)
+    
 
-def getOkolica(o,l=4,r=4,u=4,d=4):
-    x = np.reshape(np.array(o),(16,22))[:,:21]
-    m = o.tostring().find("M")
-    dy = m/22 
-    dx = m%22
+def getOkolica(observation,l=4,r=4,u=4,d=4):
+    
+    monsters = get_monsters(observation)
+    mario = get_mario(monsters)
+    
+    x = np.reshape(np.array(observation.charArray),(16,22))[:,:21]
+    
+    dx,dy = getPoint(x,"M")
+
     state = x[max(0,dy-u) : dy+d+1 , max(0,dx-l) : dx+r+1]
+
+    for m in monsters:
+        mx,my = getPoint(state,"M")
+        if m.m_type in [0, 10, 11]:
+            continue # m is Mario
+        dx = int(m.x - mario.x)
+        dy = int(m.y - mario.y)
+        try:
+            state[mx+dx,my-dy] = "W" if m.winged else "V"
+        except:
+            pass
+
     return state
     
 

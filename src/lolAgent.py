@@ -1,4 +1,6 @@
 import math
+from collections import defaultdict
+
 import copy
 import random
 import sys
@@ -15,86 +17,156 @@ from rlglue.types import Observation
 from rlglue.agent import AgentLoader as AgentLoader
 from rlglue.utils.TaskSpecVRLGLUE3 import TaskSpecParser
 
-class LolAgent(Agent):
+class FixedPolicyAgent(Agent):
 
     def agent_init(self, taskSpecString):
-        self.debug = False
-        self.reward = 0
-        self.stateAction = []
-        self.rewards = []
-        self.lastState = None
-        self.lastAction = []
+        random.seed(5)
 
-        print "Starting agent: %s" taskSpecString
-        
-    def agent_cleanup(self):
-        hf.write_score("lol_agent", self.all_scores)
-        
-    def print_world(self):
-        if self.debug:
-            print "".join(self.observation.charArray)
+        self.best_reward = -10
+        self.total_steps = 0
 
+        self.trial_number = 0
+        self.trial_start = 0
+        self.trial_reward = 0
+
+        self.all_scores = []
+        self.all_actions = []
+        
+        self.Q = defaultdict(dict)
+
+        self.debug = True
+        #self.debug = False
+        
     def agent_start(self, observation):
-        self.reward = 0
-        return self.getAction(observation)
-
-    def addReward(r):
-        for i in range(1,1+len(self.lastAction)):
-            lastAction[-i] += r/(1+i/10.)
-        self.reward += r
+        self.all_actions = []
+        self.all_scores = []
+        self.trial_start = time.time()
+        self.trial_number = 0
+        self.trial_reward = 0
+        return self.get_action(observation)
     
-    def agent_step(self, reward, observation):
-        self.addReward(reward)
-        return self.getAction(observation)
+    def agent_step(self, r, observation):
+
+        self.trial_steps += 1
+        self.total_steps += 1
+        self.trial_reward += reward
+        
+        return self.get_action(observation)
     
     def agent_end(self, reward):
-        self.addReward(reward)
-        self.lastAction = []
+        self.trial_number += 1
+        self.trial_reward += reward
+        self.all_scores.append(self.trial_reward)
+
         self.print_stats()
 
-    def print_stats():
-        print "trial number:      %d -" % (self.trial_number)
-        print "number of steps:   %d" % (self.step_number)
-        print "steps per second:  %d" % (self.step_number/time_passed)
-        print "total reward:      %.2f" % (self.total_reward)
-        print "trial reward:      %.2f" % (self.trial_reward)
-        print "best score so far: %.2f" % (self.best_trial["score"])
-        print ""
+        self.get_action(observation)
+
     
+    def agent_cleanup(self):
+        hf.write_score("lolAgent", self.all_scores)
     
     def agent_freeze(self):
+        print "agent freeze"
         pass
     
     def agent_message(self,inMessage):
-        print "Agent message:",inMessage
+        print "agent message:", inMessage
         return None
+    
+    def propagate_reward(self, reward, nextActionT):
+        alpha = 0.1
+        gama = 0.9
+        
+        l = len(self.all_actions)
+        for i in range(1,l+1):
+            state = self.all_actions[-i][0]
+            actionT= self.all_actions[-i][1]
+            self.Q[state][actionT] += reward/(1+ i/10)
+
+
+    def get_q_action(self, state):
+        action = None
+        if state in self.Q:
+            # actions = [ (actionT, score), ...]
+            items = self.Q[state].items()
+            random.shuffle(items)
+            actions = sorted(items, key=lambda x:-x[1])
+            ind = 0 # int(random.random()**4 * len(actions))
+            if actions[ind][1] > 0:
+                action = self.createAction(*actions[ind][0])
+        if action == None :
+            action = self.getRandomAction(run = 1)
+            self.Q[state][tuple(action.intArray)] = 0
+        self.all_actions.append((state,tuple(action.intArray)))
+        return action
+
     
 
     def get_action(self, observation):
-        
+
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
-        state = hf.getOkolica(observation.charArray)
-        return 0
+
+        state_arr = hf.getOkolica(observation)
+        state = state_arr.tostring()
+        action = self.get_q_action(state)
+        self.propagate_reward(reward,tuple(action.intArray))
+
+        self.print_world(observation, state, state_arr)
+        return action        
 
     def createAction(self,i,j,k):
         action = Action(3, 0)
         action.intArray[0] = i
         action.intArray[1] = j
-        action.intArray[2] = 1
+        action.intArray[2] = k
         return action
 
-    def getRandomAction(self, mindir=-1):
+    def getRandomAction(self, mindir=-1, run = 0):
         action = Action(3, 0)
         # direction (left: -1, right: 1, neither: 0)
         action.intArray[0] = random.randint(mindir,1)
         # jumping (yes: 1, no: 0)
         action.intArray[1] = random.randint(0,1)
         # speed button (on: 1, off: 0)
-        action.intArray[2] = random.randint(0,1)
+        action.intArray[2] = random.randint(run,1)
         return action
         
+    def print_world(self, obs, s, sa, okolica=100):
+        global all_scores, q, all_actions, state, state_arr, \
+                observation, mario, monsters
+        
+        monsters = hf.get_monsters(obs)
+        mario = hf.get_mario(monsters)
+        all_cores = self.all_scores
+        all_actions = self.all_actions
+        observation = obs
+        state_arr = sa
+        state = s
+        q = self.Q
 
+        if self.debug:
+            print "--------------------------------------------------"
+            s = hf.getOkolica(obs,okolica,okolica,okolica,okolica)
+            print "step: %d     reward: %.2f   " % \
+                    (self.step_number, self.trial_reward)
+            print "\n".join(["".join(i) for i in s])
+            print "x: %2.2f    y: %2.2f  " % (mario.x, mario.y)
+            print ""
+
+    def print_stats():
+        time_passed = time.time() - self.trial_start
+        self.best_trial = max(self.best_trial,self.trial_reward)
+        print "trial number:      %d -" % (self.trial_number)
+        print "number of steps:   %d" % (self.trial_steps)
+        print "steps per second:  %d" % (self.trial_steps/time_passed)
+        print "trial reward:      %.2f" % (self.trial_reward)
+        print "best score so far: %.2f" % (self.best_trial)
+        print ""
+        
+       
 
 if __name__=="__main__":        
-    AgentLoader.loadAgent(LolAgent())
+    AgentLoader.loadAgent(FixedPolicyAgent())
+
