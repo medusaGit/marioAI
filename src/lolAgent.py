@@ -33,7 +33,7 @@ class FixedPolicyAgent(Agent):
         self.trial_reward_neg = 0
 
         self.all_scores = [0]
-        self.all_actions = []
+        self.trial_actions = []
         
         self.Q = defaultdict(dict)
 
@@ -41,8 +41,7 @@ class FixedPolicyAgent(Agent):
         self.debug = False
         
     def agent_start(self, observation):
-        self.all_actions = []
-        self.all_scores = [0]
+        self.trial_actions = []
         self.trial_start = time.time()
         self.trial_steps = 0
         self.trial_number = 0
@@ -94,12 +93,12 @@ class FixedPolicyAgent(Agent):
         alpha = 0.3
         gama = 0.5
         Q = self.Q
-        l = len(self.all_actions)
+        l = len(self.trial_actions)
         for i in range(1,l):
-            s = self.all_actions[-i-1][0]
-            a = self.all_actions[-i-1][1]
-            sn = self.all_actions[-i][0]
-            an = self.all_actions[-i][1]
+            s = self.trial_actions[-i-1][0]
+            a = self.trial_actions[-i-1][1]
+            sn = self.trial_actions[-i][0]
+            an = self.trial_actions[-i][1]
             
             #Q[s][a] = (1-alpha)*Q[s][a] + alpha*(reward + gama*Q[sn][an])
             Q[s][a] += reward/(1+ i/10)
@@ -118,7 +117,7 @@ class FixedPolicyAgent(Agent):
         if action == None :
             action = self.getRandomAction(run = 1)
             self.Q[state][tuple(action.intArray)] = 0
-        self.all_actions.append((state,tuple(action.intArray)))
+        self.trial_actions.append((state,tuple(action.intArray)))
         return action
 
     
@@ -154,14 +153,14 @@ class FixedPolicyAgent(Agent):
         return action
         
     def print_world(self, s = [], sa = [], ok=100):
-        global all_scores, q, all_actions, state, state_arr, \
+        global all_scores, q, trial_actions, state, state_arr, \
                 observation, mario, monsters
         
         observation = self.last_observation
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
         all_cores = self.all_scores
-        all_actions = self.all_actions
+        trial_actions = self.trial_actions
         if len(sa) > 0: state_arr = sa
         if len(s) > 0: state = s
         q = self.Q
