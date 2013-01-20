@@ -22,7 +22,7 @@ class FixedPolicyAgent(Agent):
     def agent_init(self, taskSpecString):
         #random.seed(5)
 
-        self.tweek = 2
+        self.tweek = 3
         self.best_reward = -10
         self.total_steps = 0
 
@@ -110,13 +110,13 @@ class FixedPolicyAgent(Agent):
 
     def get_q_action(self, state):
         action = None
-        explore = 0.2
-        if state in self.Q:
+        explore = 0.1
+        if state in self.Q and explore < random.random():
             # actions = [ (actionT, score), ...]
             items = self.Q[state].items()
             random.shuffle(items)
             actions = sorted(items, key=lambda x:-x[1])
-            ind = int(random.random()**2 * len(actions))
+            ind = 0 # int(random.random()**4 * len(actions))
             if actions[ind][1] > 0:
                 action = self.createAction(*actions[ind][0])
         if action == None :
@@ -138,7 +138,7 @@ class FixedPolicyAgent(Agent):
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
 
-        state_arr = hf.getOkolica(observation,3,3,3,3)
+        state_arr = hf.getOkolica(observation,2,4,4,4)
         state = state_arr.tostring()
         action = self.get_q_action(state)
         self.propagate_reward(reward)

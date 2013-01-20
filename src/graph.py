@@ -32,6 +32,7 @@ def draw(name):
 if __name__ == "__main__":
     files = ["lolAgent", 
             "lolAgentTweeks_1", 
+            "lolAgentTweeks_2", 
             "randomAgent", 
             "randomForwardAgent"]
     map(draw, files)
