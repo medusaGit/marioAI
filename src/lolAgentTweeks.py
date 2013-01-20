@@ -111,7 +111,7 @@ class FixedPolicyAgent(Agent):
     def get_q_action(self, state):
         action = None
         explore = 0.1
-        if state in self.Q and explore < 10*random.random():
+        if state in self.Q:
             # actions = [ (actionT, score), ...]
             items = self.Q[state].items()
             random.shuffle(items)
@@ -120,7 +120,7 @@ class FixedPolicyAgent(Agent):
             if actions[ind][1] > 0:
                 action = self.createAction(*actions[ind][0])
         if action == None :
-            if len(self.Q) > 10 and explore > random.random():
+            if len(self.Q) > 10 and explore < random.random():
                 a = sorted([(k,j) for i in self.Q.values() 
                         for j,k in i.items()])[-10:]
                 r = random.choice(a)
@@ -138,8 +138,15 @@ class FixedPolicyAgent(Agent):
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
 
-        state_arr = hf.getOkolica(observation,2,4,4,4)
+        state_arr = hf.getOkolica(observation,4,4,4,4)
         state = state_arr.tostring()
+        if (state.find("V") != -1 
+                and abs(state.find("V") - state.find("M")) <5):
+            f = min(state.find("V"), state.find("M"))
+            t = max(state.find("V"), state.find("M")) +1
+            state = state[f:t]
+
+
         action = self.get_q_action(state)
         self.propagate_reward(reward)
 
