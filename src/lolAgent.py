@@ -25,42 +25,57 @@ class FixedPolicyAgent(Agent):
         self.best_reward = -10
         self.total_steps = 0
 
+        self.trial_steps = 0
         self.trial_number = 0
         self.trial_start = 0
         self.trial_reward = 0
+        self.trial_reward_pos = 0
+        self.trial_reward_neg = 0
 
-        self.all_scores = []
+        self.all_scores = [0]
         self.all_actions = []
         
         self.Q = defaultdict(dict)
 
         self.debug = True
-        #self.debug = False
+        self.debug = False
         
     def agent_start(self, observation):
         self.all_actions = []
-        self.all_scores = []
+        self.all_scores = [0]
         self.trial_start = time.time()
+        self.trial_steps = 0
         self.trial_number = 0
         self.trial_reward = 0
+        self.trial_reward_pos = 0
+        self.trial_reward_neg = 0
         return self.get_action(observation)
     
-    def agent_step(self, r, observation):
+    def agent_step(self, reward, observation):
 
         self.trial_steps += 1
         self.total_steps += 1
         self.trial_reward += reward
+        if reward > 0:
+            self.trial_reward_pos += reward
+        else:
+            self.trial_reward_neg += reward
         
-        return self.get_action(observation)
+        return self.get_action(observation, reward)
     
     def agent_end(self, reward):
         self.trial_number += 1
         self.trial_reward += reward
         self.all_scores.append(self.trial_reward)
 
+        if reward > 0:
+            self.trial_reward_pos += reward
+        else:
+            self.trial_reward_neg += reward
+
         self.print_stats()
 
-        self.get_action(observation)
+        self.propagate_reward(reward)
 
     
     def agent_cleanup(self):
@@ -74,15 +89,18 @@ class FixedPolicyAgent(Agent):
         print "agent message:", inMessage
         return None
     
-    def propagate_reward(self, reward, nextActionT):
+    def propagate_reward(self, reward):
         alpha = 0.1
         gama = 0.9
-        
+        Q = self.Q
         l = len(self.all_actions)
-        for i in range(1,l+1):
-            state = self.all_actions[-i][0]
-            actionT= self.all_actions[-i][1]
-            self.Q[state][actionT] += reward/(1+ i/10)
+        for i in range(1,l):
+            s = self.all_actions[-i-1][0]
+            a = self.all_actions[-i-1][1]
+            sn = self.all_actions[-i][0]
+            an = self.all_actions[-i][1]
+            
+            Q[s][a] += alpha * (r + gama*Q[sn][an] - Q[s][a])
 
 
     def get_q_action(self, state):
@@ -103,17 +121,17 @@ class FixedPolicyAgent(Agent):
 
     
 
-    def get_action(self, observation):
+    def get_action(self, observation, reward = 0):
 
         monsters = hf.get_monsters(observation)
         mario = hf.get_mario(monsters)
 
-        state_arr = hf.getOkolica(observation)
+        state_arr = hf.getOkolica(observation,4,4,4,4)
         state = state_arr.tostring()
         action = self.get_q_action(state)
-        self.propagate_reward(reward,tuple(action.intArray))
+        self.propagate_reward(reward)
 
-        self.print_world(observation, state, state_arr)
+        if self.debug: self.print_world(observation, state, state_arr)
         return action        
 
     def createAction(self,i,j,k):
@@ -150,19 +168,22 @@ class FixedPolicyAgent(Agent):
             print "--------------------------------------------------"
             s = hf.getOkolica(obs,okolica,okolica,okolica,okolica)
             print "step: %d     reward: %.2f   " % \
-                    (self.step_number, self.trial_reward)
+                    (self.trial_steps, self.trial_reward)
             print "\n".join(["".join(i) for i in s])
-            print "x: %2.2f    y: %2.2f  " % (mario.x, mario.y)
+            print "x: %2.2f    y: %2.2f    q-len: %d " % \
+                    (mario.x, mario.y, len(self.Q))
             print ""
 
-    def print_stats():
+    def print_stats(self):
         time_passed = time.time() - self.trial_start
-        self.best_trial = max(self.best_trial,self.trial_reward)
+        self.best_reward = max(self.best_reward,self.trial_reward)
         print "trial number:      %d -" % (self.trial_number)
         print "number of steps:   %d" % (self.trial_steps)
         print "steps per second:  %d" % (self.trial_steps/time_passed)
+        print "trial reward pos:  %.2f" % (self.trial_reward_pos)
+        print "trial reward neg:  %.2f" % (self.trial_reward_neg)
         print "trial reward:      %.2f" % (self.trial_reward)
-        print "best score so far: %.2f" % (self.best_trial)
+        print "best score so far: %.2f" % (self.best_reward)
         print ""
         
        

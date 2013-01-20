@@ -112,7 +112,7 @@ def getOkolica(observation,l=4,r=4,u=4,d=4):
         dx = int(m.x - mario.x)
         dy = int(m.y - mario.y)
         try:
-            state[mx+dx,my-dy] = "W" if m.winged else "V"
+            state[my-dy,mx+dx] = "W" if m.winged else "V"
         except:
             pass
 
